@@ -105,9 +105,10 @@ interface AbilityRowProps {
     value: number | string;
     maxValue?: number;
     grade?: string;
+    barMax?: number;
 }
 
-function AbilityRow({label, labelJp, value, maxValue, grade}: AbilityRowProps) {
+function AbilityRow({label, labelJp, value, maxValue, grade, barMax}: AbilityRowProps) {
     const resolvedGrade =
         grade !== undefined ? grade : typeof value === "number" ? getAbilityGrade(value) : "";
     const gradeColor =
@@ -115,6 +116,9 @@ function AbilityRow({label, labelJp, value, maxValue, grade}: AbilityRowProps) {
             resolvedGrade === "B" ? "text-orange-500 font-bold" :
                 resolvedGrade === "C" ? "text-blue-500" : "text-gray-500";
     const tip = TOOLTIPS[labelJp];
+    const numericValue = typeof value === "number" ? value : null;
+    const barScaleMax = Math.max(1, barMax ?? maxValue ?? 255);
+    const barRatio = numericValue !== null ? Math.max(0, Math.min(1, numericValue / barScaleMax)) : 0;
 
     return (
         <tr className="border-b border-gray-100">
@@ -124,7 +128,21 @@ function AbilityRow({label, labelJp, value, maxValue, grade}: AbilityRowProps) {
             {tip && <HelpIconTooltip text={tip}/>}
         </span>
             </td>
-            <td className="py-1.5 text-sm font-mono w-24 text-right">{value}</td>
+            <td className="py-1.5 text-sm w-36">
+                {numericValue !== null ? (
+                    <div className="flex items-center gap-2">
+                        <div className="h-2 flex-1 bg-gray-200 rounded overflow-hidden">
+                            <div
+                                className="h-full bg-yellow-500"
+                                style={{width: `${barRatio * 100}%`}}
+                            />
+                        </div>
+                        <span className="font-mono text-right w-10 shrink-0">{numericValue}</span>
+                    </div>
+                ) : (
+                    <span className="font-mono text-right block">{value}</span>
+                )}
+            </td>
             <td className={`py-1.5 text-sm text-center ${gradeColor}`}>{resolvedGrade}</td>
             <td className="py-1.5 text-xs text-gray-500">
                 {maxValue !== undefined ? `最大: ${maxValue} (${getAbilityGrade(maxValue)})` : ""}
@@ -243,6 +261,42 @@ function PasswordAnalyzer() {
 
     const {abilities} = result ?? {abilities: null};
 
+    const radarMetrics = abilities
+        ? (() => {
+            const maxSenko = calcMaxAbility(abilities.senko, "senko");
+            const maxShunpatsu = calcMaxAbility(abilities.shunpatsu, "shunpatsu");
+            const maxJizaisei = calcMaxAbility(abilities.jizaisei, "jizaisei");
+            const maxKasoku = calcMaxAbility(abilities.kasoku, "kasoku");
+            return [
+                {label: "先自", value: result!.senJizai, max: Math.floor((maxSenko + maxJizaisei) / 2)},
+                {label: "先瞬", value: result!.senShun, max: Math.floor((maxSenko + maxShunpatsu) / 2)},
+                {label: "瞬加", value: result!.shunKa, max: Math.floor((maxShunpatsu + maxKasoku) / 2)},
+                {label: "先加", value: result!.senKa, max: Math.floor((maxSenko + maxKasoku) / 2)},
+            ];
+        })()
+        : [];
+    const radarMax = Math.max(...radarMetrics.map((m) => m.max), 1);
+
+    const radarMetrics6 = abilities
+        ? (() => {
+            const maxSenko = calcMaxAbility(abilities.senko, "senko");
+            const maxChokyo = calcMaxAbility(abilities.chokyo, "chokyo");
+            const maxShunpatsu = calcMaxAbility(abilities.shunpatsu, "shunpatsu");
+            const maxJizaisei = calcMaxAbility(abilities.jizaisei, "jizaisei");
+            const maxKasoku = calcMaxAbility(abilities.kasoku, "kasoku");
+            const maxA3 = Math.floor((maxSenko + maxShunpatsu + maxKasoku) / 3);
+            return [
+                {label: "先行力", value: abilities.senko, max: maxSenko},
+                {label: "長距離", value: abilities.chokyo, max: maxChokyo},
+                {label: "瞬発力", value: abilities.shunpatsu, max: maxShunpatsu},
+                {label: "自在性", value: abilities.jizaisei, max: maxJizaisei},
+                {label: "加速力", value: abilities.kasoku, max: maxKasoku},
+                {label: "A3", value: result!.a3, max: maxA3},
+            ];
+        })()
+        : [];
+    const radarMax6 = Math.max(...radarMetrics6.map((m) => m.max), 1);
+
     return (
         <div className="space-y-6">
             <div>
@@ -345,8 +399,8 @@ function PasswordAnalyzer() {
                                         maxValue={calcMaxAbility(abilities.jizaisei, "jizaisei")}/>
                             <AbilityRow label="kasoku" labelJp="加速力" value={abilities.kasoku}
                                         maxValue={calcMaxAbility(abilities.kasoku, "kasoku")}/>
-                            <AbilityRow label="hp" labelJp="HP" value={abilities.hp}/>
-                            <AbilityRow label="omatsuri" labelJp="お祭り好き" value={result.festival} grade=""/>
+                            <AbilityRow label="hp" labelJp="HP" value={abilities.hp} grade=""/>
+                            <AbilityRow label="omatsuri" labelJp="お祭り好き" value={result.festival} grade="" barMax={15}/>
                             <AbilityRow label="a1" labelJp="Ａ１" value={result.a1} grade=""/>
                             <AbilityRow label="a2" labelJp="Ａ２" value={result.a2} grade=""/>
                             <AbilityRow label="a3" labelJp="Ａ３" value={result.a3} grade=""/>
@@ -366,8 +420,114 @@ function PasswordAnalyzer() {
                             長距離 +65、その他 +75 が上限の目安。
                         </p>
                     </div>
+                    <div className="bg-white rounded-lg border border-gray-200 p-4">
+                        <h3 className="font-semibold text-gray-800 mb-3">チャート</h3>
+                        <div className="mt-4 border border-gray-100 rounded-lg p-3 bg-gray-50">
+                            <div className="text-sm font-medium text-gray-700 mb-2">4軸（先自 / 先瞬 / 瞬加 / 先加）</div>
+                            <RadarChart metrics={radarMetrics} maxValue={radarMax}/>
+                        </div>
+                        <div className="mt-4 border border-gray-100 rounded-lg p-3 bg-gray-50">
+                            <div className="text-sm font-medium text-gray-700 mb-2">6軸（先行力 / 長距離 / 瞬発力 / 自在性 / 加速力 / A3）</div>
+                            <RadarChart metrics={radarMetrics6} maxValue={radarMax6}/>
+                        </div>
+                    </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+function RadarChart({
+                        metrics,
+                        maxValue,
+                    }: {
+    metrics: Array<{ label: string; value: number; max: number }>;
+    maxValue: number;
+}) {
+    if (metrics.length === 0) return null;
+
+    const size = 240;
+    const center = size / 2;
+    const radius = 78;
+    const ringCount = 4;
+    const angleStep = (Math.PI * 2) / metrics.length;
+
+    const toPoint = (ratio: number, idx: number) => {
+        const angle = -Math.PI / 2 + idx * angleStep;
+        const x = center + Math.cos(angle) * radius * ratio;
+        const y = center + Math.sin(angle) * radius * ratio;
+        return {x, y};
+    };
+
+    const polygonPoints = metrics
+        .map((m, i) => {
+            const p = toPoint(Math.max(0, Math.min(1, m.value / maxValue)), i);
+            return `${p.x},${p.y}`;
+        })
+        .join(" ");
+
+    return (
+        <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <svg viewBox={`0 0 ${size} ${size}`} className="w-56 h-56 shrink-0 mx-auto md:mx-0">
+                {Array.from({length: ringCount}, (_, i) => {
+                    const ratio = (i + 1) / ringCount;
+                    const ringPoints = metrics
+                        .map((_, j) => {
+                            const p = toPoint(ratio, j);
+                            return `${p.x},${p.y}`;
+                        })
+                        .join(" ");
+                    return <polygon key={i} points={ringPoints} fill="none" stroke="#d1d5db" strokeWidth="1"/>;
+                })}
+
+                {metrics.map((m, i) => {
+                    const end = toPoint(1, i);
+                    const label = toPoint(1.18, i);
+                    return (
+                        <g key={m.label}>
+                            <line x1={center} y1={center} x2={end.x} y2={end.y} stroke="#d1d5db" strokeWidth="1"/>
+                            <text x={label.x} y={label.y} textAnchor="middle" dominantBaseline="middle" fontSize="11" fill="#374151">
+                                {m.label}
+                            </text>
+                        </g>
+                    );
+                })}
+
+                <polygon points={polygonPoints} fill="rgba(245, 158, 11, 0.25)" stroke="#f59e0b" strokeWidth="2"/>
+                {metrics.map((m, i) => {
+                    const p = toPoint(Math.max(0, Math.min(1, m.value / maxValue)), i);
+                    const vx = p.x - center;
+                    const vy = p.y - center;
+                    const len = Math.hypot(vx, vy) || 1;
+                    const tx = p.x + (vx / len) * 10;
+                    const ty = p.y + (vy / len) * 10;
+                    const anchor = Math.abs(vx) < 6 ? "middle" : vx > 0 ? "start" : "end";
+
+                    return (
+                        <g key={`dot-${m.label}`}>
+                            <circle cx={p.x} cy={p.y} r="3" fill="#d97706"/>
+                            <text
+                                x={tx}
+                                y={ty}
+                                textAnchor={anchor}
+                                dominantBaseline="middle"
+                                fontSize="10"
+                                fontWeight="700"
+                                fill="#92400e"
+                            >
+                                {m.value}
+                            </text>
+                        </g>
+                    );
+                })}
+            </svg>
+
+            <div className="text-xs text-gray-600 space-y-1">
+                {metrics.map((m) => (
+                    <div key={`legend-${m.label}`}>{m.label}: {m.value} / {m.max}</div>
+                ))}
+                <div className="text-gray-400 mt-1">表示スケール最大値: {maxValue}</div>
+            </div>
         </div>
     );
 }
@@ -764,7 +924,7 @@ export default function Home() {
                     <div className="bg-blue-50 border-t border-blue-100 px-6 py-3">
                         <p className="text-xs text-blue-600">
                             ※ このツールはコミュニティによるリバースエンジニアリングに基づいています。
-                            デコード結果はゲーム内の実際の値と異なる場合があります。
+                            解析結果はゲーム内の実際の値と異なる場合があります。
                         </p>
                     </div>
                 </div>
