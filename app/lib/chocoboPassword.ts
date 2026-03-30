@@ -14,6 +14,18 @@
 
 export type AbilityGrade = "A" | "B" | "C" | "D";
 
+export const WING_COLORS = ["白色", "黒色", "金色", "赤色", "青色", "緑色", "黄色", "紫色", "桃色", "灰色"] as const;
+export const FOREHEAD_COLORS = ["赤色", "無", "虹色"] as const;
+export const EYE_COLORS = ["赤色", "青色", "緑色"] as const;
+export const BODY_TYPES = ["やせ", "普通", "デブ"] as const;
+export const BODY_SIZES = ["低", "中", "高"] as const;
+export const GENDER_VALUES = ["♂", "♀"] as const;
+export const DART_VALUES = ["✕", "△", "○", "◎"] as const;
+export const ROUND_VALUES = ["なし", "右", "左", "右左"] as const;
+export const TEMP_VALUES = ["なし", "暑", "寒", "暑寒"] as const;
+export const ARI_NASHI_VALUES = ["なし", "あり"] as const;
+export const XO_VALUES = ["✕", "○"] as const;
+
 export interface ChocoboAbilities {
     /** 先行力 – leading / dash ability */
     senko: number;
@@ -33,23 +45,12 @@ export interface ChocoboAbilities {
     hp: number;
 }
 
-export type WingColor =
-    | "白色"
-    | "黒色"
-    | "金色"
-    | "赤色"
-    | "青色"
-    | "緑色"
-    | "黄色"
-    | "紫色"
-    | "桃色"
-    | "灰色"
-    | "水色";
-export type ForeheadColor = | "赤色" | "無" | "虹色";
-export type EyeColor = | "赤色" | "青色" | "緑色";
-export type BodyType = "やせ" | "普通" | "デブ";
-export type BodySize = "低" | "中" | "高";
-export type Gender = "♂" | "♀";
+export type WingColor = typeof WING_COLORS[number];
+export type ForeheadColor = typeof FOREHEAD_COLORS[number];
+export type EyeColor = typeof EYE_COLORS[number];
+export type BodyType = typeof BODY_TYPES[number];
+export type BodySize = typeof BODY_SIZES[number];
+export type Gender = typeof GENDER_VALUES[number];
 
 export interface ChocoboParams {
     abilities: ChocoboAbilities;
@@ -74,15 +75,15 @@ export interface ChocoboParams {
     wins: number;
     /** Total races entered */
     races: number;
-    dart: "✕" | "△" | "○" | "◎";
-    round: "なし" | "右" | "左" | "右左";
-    temp: "なし" | "暑" | "寒" | "暑寒";
-    kakari: "なし" | "あり";
-    aori: "なし" | "あり";
-    irekomi: "なし" | "あり";
+    dart: typeof DART_VALUES[number];
+    round: typeof ROUND_VALUES[number];
+    temp: typeof TEMP_VALUES[number];
+    kakari: typeof ARI_NASHI_VALUES[number];
+    aori: typeof ARI_NASHI_VALUES[number];
+    irekomi: typeof ARI_NASHI_VALUES[number];
     festival: number;
-    kisyo: "✕" | "○";
-    slot: "✕" | "○";
+    kisyo: typeof XO_VALUES[number];
+    slot: typeof XO_VALUES[number];
     a1: number;
     a2: number;
     a3: number;
@@ -92,8 +93,8 @@ export interface ChocoboParams {
     senShun: number;
     shunKa: number;
     senKa: number;
-    agari: "なし" | "あり";
-    cross: "なし" | "あり";
+    agari: typeof ARI_NASHI_VALUES[number];
+    cross: typeof ARI_NASHI_VALUES[number];
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -149,29 +150,6 @@ const LIVE_NAME_CHAR_TO_CODE: Readonly<Record<string, number>> = Object.freeze(
 );
 
 const LIVE_NAME_CODE_INDEXES = [26, 1, 24, 3, 15, 5, 20, 7, 17, 29] as const;
-const LIVE_WING_COLORS: WingColor[] = ["白色", "黒色", "金色", "赤色", "青色", "緑色", "黄色", "紫色", "桃色", "灰色"];
-const LIVE_FOREHEAD_COLORS: ForeheadColor[] = ["赤色", "無", "虹色"];
-const LIVE_EYE_COLORS: EyeColor[] = ["赤色", "青色", "緑色"];
-const LIVE_BODY_SIZES: BodySize[] = ["低", "中", "高"];
-const LIVE_BODY_TYPES: BodyType[] = ["やせ", "普通", "デブ"];
-const LIVE_DARTS = ["✕", "△", "○", "◎"] as const;
-const LIVE_ROUNDS = ["なし", "右", "左", "右左"] as const;
-const LIVE_TEMPS = ["なし", "暑", "寒", "暑寒"] as const;
-
-export const WING_COLORS: WingColor[] = [
-    "白色", "黒色", "金色", "赤色", "青色", "緑色", "黄色", "紫色", "桃色", "灰色",
-];
-
-export const FOREHEAD_COLORS: ForeheadColor[] = [
-    "赤色", "無", "虹色",
-];
-
-export const EYE_COLORS: EyeColor[] = [
-    "赤色", "青色", "緑色",
-];
-
-export const BODY_TYPES: BodyType[] = ["やせ", "普通", "デブ"];
-export const BODY_SIZES: BodySize[] = ["低", "中", "高"];
 
 
 // ─────────────────────────────────────────────────────────────
@@ -258,11 +236,11 @@ export function decodePassword(password: string): ChocoboParams | null {
         },
         name,
         gender: genderCode === 1 ? "♀" : "♂",
-        wingColor: LIVE_WING_COLORS[wingColorCode] ?? LIVE_WING_COLORS[0],
-        foreheadColor: LIVE_FOREHEAD_COLORS[foreheadColorCode] ?? LIVE_FOREHEAD_COLORS[0],
-        eyeColor: LIVE_EYE_COLORS[eyeColorCode] ?? LIVE_EYE_COLORS[0],
-        bodyType: LIVE_BODY_TYPES[bodyTypeCode] ?? LIVE_BODY_TYPES[0],
-        bodySize: LIVE_BODY_SIZES[bodySizeCode] ?? LIVE_BODY_SIZES[0],
+        wingColor: WING_COLORS[wingColorCode] ?? WING_COLORS[0],
+        foreheadColor: FOREHEAD_COLORS[foreheadColorCode] ?? FOREHEAD_COLORS[0],
+        eyeColor: EYE_COLORS[eyeColorCode] ?? EYE_COLORS[0],
+        bodyType: BODY_TYPES[bodyTypeCode] ?? BODY_TYPES[0],
+        bodySize: BODY_SIZES[bodySizeCode] ?? BODY_SIZES[0],
         ageYear,
         ageMonth,
         ageWeek,
@@ -270,15 +248,15 @@ export function decodePassword(password: string): ChocoboParams | null {
         regWeek: ageWeek,
         wins,
         races,
-        dart: LIVE_DARTS[dartCode] ?? "✕",
-        round: LIVE_ROUNDS[roundCode] ?? "なし",
-        temp: LIVE_TEMPS[tempCode] ?? "なし",
+        dart: DART_VALUES[dartCode] ?? DART_VALUES[0],
+        round: ROUND_VALUES[roundCode] ?? ROUND_VALUES[0],
+        temp: TEMP_VALUES[tempCode] ?? TEMP_VALUES[0],
         kakari: type26 === 1 ? "あり" : "なし",
         aori: type27 === 1 ? "あり" : "なし",
         irekomi: type28 === 1 ? "あり" : "なし",
         festival: matsuri,
-        kisyo: kisyoCode === 2 || kisyoCode === 3 ? "○" : "✕",
-        slot: slotCode === 1 ? "○" : "✕",
+        kisyo: kisyoCode === 2 || kisyoCode === 3 ? XO_VALUES[1] : XO_VALUES[0],
+        slot: slotCode === 1 ? XO_VALUES[1] : XO_VALUES[0],
         a1,
         a2,
         a3,
@@ -350,14 +328,14 @@ export function encodePassword(params: ChocoboParams): string {
     const matsHi = festival % 2;
 
     const genderCode = params.gender === "♀" ? 1 : 0;
-    const dartCode = LIVE_DARTS.indexOf(params.dart as (typeof LIVE_DARTS)[number]);
+    const dartCode = DART_VALUES.indexOf(params.dart);
     code[16] = matsLow + genderCode * 8 + clamp(dartCode >= 0 ? dartCode : 0, 0, 3) * 16;
 
-    const roundCode = LIVE_ROUNDS.indexOf(params.round as (typeof LIVE_ROUNDS)[number]);
-    const tempCode = LIVE_TEMPS.indexOf(params.temp as (typeof LIVE_TEMPS)[number]);
+    const roundCode = ROUND_VALUES.indexOf(params.round);
+    const tempCode = TEMP_VALUES.indexOf(params.temp);
     code[8] = matsHi * 64 + clamp(roundCode >= 0 ? roundCode : 0, 0, 3) * 4 + clamp(tempCode >= 0 ? tempCode : 0, 0, 3);
 
-    const wingColorCode = LIVE_WING_COLORS.indexOf(params.wingColor as WingColor);
+    const wingColorCode = WING_COLORS.indexOf(params.wingColor);
     const wingCode = clamp(wingColorCode >= 0 ? wingColorCode : 0, 0, 9);
     const wingHigh = Math.floor(wingCode / 4);
     const wingLow = wingCode % 4;
@@ -366,7 +344,7 @@ export function encodePassword(params: ChocoboParams): string {
     const ageMonth = clamp(Math.floor(params.ageMonth), 0, 15);
     const ageWeekRaw = clamp(Math.floor(params.ageWeek) - 1, 0, 3);
 
-    const bodySizeCode = LIVE_BODY_SIZES.indexOf(params.bodySize as BodySize);
+    const bodySizeCode = BODY_SIZES.indexOf(params.bodySize);
     const bodySize = clamp(bodySizeCode >= 0 ? bodySizeCode : 0, 0, 2);
     const bodySizeHigh = Math.floor(bodySize / 2);
     const bodySizeLow = bodySize % 2;
@@ -381,9 +359,9 @@ export function encodePassword(params: ChocoboParams): string {
 
     code[13] = wingHigh;
 
-    const eyeColorCode = LIVE_EYE_COLORS.indexOf(params.eyeColor as EyeColor);
-    const foreheadColorCode = LIVE_FOREHEAD_COLORS.indexOf(params.foreheadColor as ForeheadColor);
-    const bodyTypeCode = LIVE_BODY_TYPES.indexOf(params.bodyType as BodyType);
+    const eyeColorCode = EYE_COLORS.indexOf(params.eyeColor);
+    const foreheadColorCode = FOREHEAD_COLORS.indexOf(params.foreheadColor);
+    const bodyTypeCode = BODY_TYPES.indexOf(params.bodyType);
 
     code[4] =
         clamp(eyeColorCode >= 0 ? eyeColorCode : 0, 0, 3) +
@@ -491,12 +469,12 @@ export function defaultParams(): ChocoboParams {
         dart: "✕",
         round: "なし",
         temp: "なし",
-        kakari: "なし",
-        aori: "なし",
-        irekomi: "なし",
+        kakari: ARI_NASHI_VALUES[0],
+        aori: ARI_NASHI_VALUES[0],
+        irekomi: ARI_NASHI_VALUES[0],
         festival: 0,
-        kisyo: "✕",
-        slot: "✕",
+        kisyo: XO_VALUES[0],
+        slot: XO_VALUES[0],
         a1: 100,
         a2: 100,
         a3: 100,
@@ -506,7 +484,7 @@ export function defaultParams(): ChocoboParams {
         senShun: 100,
         shunKa: 100,
         senKa: 100,
-        agari: "なし",
-        cross: "なし",
+        agari: ARI_NASHI_VALUES[0],
+        cross: ARI_NASHI_VALUES[0],
     };
 }

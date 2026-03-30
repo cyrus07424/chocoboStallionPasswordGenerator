@@ -2,8 +2,10 @@
 
 import {useState} from "react";
 import {
+    ARI_NASHI_VALUES,
     BODY_SIZES,
     BODY_TYPES,
+    DART_VALUES,
     type BodySize,
     type BodyType,
     calcMaxAbility,
@@ -11,6 +13,7 @@ import {
     type ChocoboParams,
     decodePassword,
     defaultParams,
+    GENDER_VALUES,
     encodePassword,
     EYE_COLORS,
     type EyeColor,
@@ -19,9 +22,12 @@ import {
     type Gender,
     getAbilityGrade,
     isValidPassword,
+    ROUND_VALUES,
     PASSWORD_LENGTH,
+    TEMP_VALUES,
     WING_COLORS,
     type WingColor,
+    XO_VALUES,
 } from "./lib/chocoboPassword";
 
 // ─────────────────────────────────────────────────────────────
@@ -107,6 +113,10 @@ function LabelWithHelp({label}: { label: string }) {
             {tip && <HelpIconTooltip text={tip}/>}
         </span>
     );
+}
+
+function toMappedOptions(values: readonly string[]) {
+    return values.map((value) => ({label: value, value}));
 }
 
 // Sub-components
@@ -587,6 +597,12 @@ function PasswordGenerator() {
     };
 
     const {abilities} = params;
+    const formatGeneratedPassword = (raw: string) => {
+        if (raw.length !== PASSWORD_LENGTH) return raw;
+        const firstLine = `${raw.slice(0, 6)} ${raw.slice(6, 12)} ${raw.slice(12, 17)}`;
+        const secondLine = `${raw.slice(17, 23)} ${raw.slice(23, 29)} ${raw.slice(29, 34)}`;
+        return `${firstLine}\n${secondLine}`;
+    };
     const derivedStats = {
         a1: Math.floor((abilities.senko + abilities.chokyo + abilities.shunpatsu + abilities.jizoku + abilities.sokojikara + abilities.jizaisei + abilities.kasoku) / 7),
         a2: Math.floor((abilities.senko + abilities.chokyo + abilities.shunpatsu + abilities.jizoku + abilities.sokojikara + abilities.jizaisei + abilities.kasoku + abilities.hp) / 8),
@@ -621,7 +637,7 @@ function PasswordGenerator() {
                     <SelectField
                         label="性別"
                         value={params.gender}
-                        options={["♂", "♀"]}
+                        options={GENDER_VALUES}
                         onChange={(v) => setParams((p) => ({...p, gender: v as Gender}))}
                     />
 
@@ -646,6 +662,8 @@ function PasswordGenerator() {
                         onChange={(v) => setParams((p) => ({...p, eyeColor: v as EyeColor}))}
                     />
 
+                    <div className="hidden md:block" aria-hidden="true" />
+
                     <SelectField
                         label="体型"
                         value={params.bodyType}
@@ -668,7 +686,7 @@ function PasswordGenerator() {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1"><LabelWithHelp label="年齢"/></label>
                         <div className="grid grid-cols-3 gap-2">
-                            <NumberField label="年" value={params.ageYear} min={3} max={18}
+                            <NumberField label="歳" value={params.ageYear} min={3} max={18}
                                          onChange={(v) => setParams((p) => ({...p, ageYear: v}))}/>
                             <NumberField label="月" value={params.ageMonth} min={1} max={12}
                                          onChange={(v) => setParams((p) => ({...p, ageMonth: v}))}/>
@@ -742,34 +760,19 @@ function PasswordGenerator() {
                     <MappedSelectField
                         label="ダート"
                         value={params.dart}
-                        options={[
-                            {label: "✕", value: "✕"},
-                            {label: "△", value: "△"},
-                            {label: "○", value: "○"},
-                            {label: "◎", value: "◎"},
-                        ]}
+                        options={toMappedOptions(DART_VALUES)}
                         onChange={(v) => setParams((p) => ({...p, dart: v as ChocoboParams["dart"]}))}
                     />
                     <MappedSelectField
                         label="周り"
                         value={params.round}
-                        options={[
-                            {label: "なし", value: "なし"},
-                            {label: "右", value: "右"},
-                            {label: "左", value: "左"},
-                            {label: "右左", value: "右左"},
-                        ]}
+                        options={toMappedOptions(ROUND_VALUES)}
                         onChange={(v) => setParams((p) => ({...p, round: v as ChocoboParams["round"]}))}
                     />
                     <MappedSelectField
                         label="気温"
                         value={params.temp}
-                        options={[
-                            {label: "なし", value: "なし"},
-                            {label: "暑", value: "暑"},
-                            {label: "寒", value: "寒"},
-                            {label: "暑寒", value: "暑寒"},
-                        ]}
+                        options={toMappedOptions(TEMP_VALUES)}
                         onChange={(v) => setParams((p) => ({...p, temp: v as ChocoboParams["temp"]}))}
                     />
                     <NumberField
@@ -782,64 +785,44 @@ function PasswordGenerator() {
                     <MappedSelectField
                         label="かかり癖"
                         value={params.kakari}
-                        options={[
-                            {label: "なし", value: "なし"},
-                            {label: "あり", value: "あり"},
-                        ]}
+                        options={toMappedOptions(ARI_NASHI_VALUES)}
                         onChange={(v) => setParams((p) => ({...p, kakari: v as ChocoboParams["kakari"]}))}
                     />
                     <MappedSelectField
                         label="あおり癖"
                         value={params.aori}
-                        options={[
-                            {label: "なし", value: "なし"},
-                            {label: "あり", value: "あり"},
-                        ]}
+                        options={toMappedOptions(ARI_NASHI_VALUES)}
                         onChange={(v) => setParams((p) => ({...p, aori: v as ChocoboParams["aori"]}))}
                     />
                     <MappedSelectField
                         label="いれこみ癖"
                         value={params.irekomi}
-                        options={[
-                            {label: "なし", value: "なし"},
-                            {label: "あり", value: "あり"},
-                        ]}
+                        options={toMappedOptions(ARI_NASHI_VALUES)}
                         onChange={(v) => setParams((p) => ({...p, irekomi: v as ChocoboParams["irekomi"]}))}
                     />
+                    <div className="hidden md:block" aria-hidden="true" />
                     <MappedSelectField
                         label="4-2気性"
                         value={params.kisyo}
-                        options={[
-                            {label: "✕", value: "✕"},
-                            {label: "○", value: "○"},
-                        ]}
+                        options={toMappedOptions(XO_VALUES)}
                         onChange={(v) => setParams((p) => ({...p, kisyo: v as ChocoboParams["kisyo"]}))}
                     />
                     <MappedSelectField
                         label="スロット"
                         value={params.slot}
-                        options={[
-                            {label: "✕", value: "✕"},
-                            {label: "○", value: "○"},
-                        ]}
+                        options={toMappedOptions(XO_VALUES)}
                         onChange={(v) => setParams((p) => ({...p, slot: v as ChocoboParams["slot"]}))}
                     />
                     <MappedSelectField
                         label="あがり症"
                         value={params.agari}
-                        options={[
-                            {label: "なし", value: "なし"},
-                            {label: "あり", value: "あり"},
-                        ]}
+                        options={toMappedOptions(ARI_NASHI_VALUES)}
                         onChange={(v) => setParams((p) => ({...p, agari: v as ChocoboParams["agari"]}))}
                     />
                     <MappedSelectField
                         label="クロス病"
                         value={params.cross}
-                        options={[
-                            {label: "なし", value: "なし"},
-                            {label: "あり", value: "あり"},
-                        ]}
+                        options={toMappedOptions(ARI_NASHI_VALUES)}
                         onChange={(v) => setParams((p) => ({...p, cross: v as ChocoboParams["cross"]}))}
                     />
                 </div>
@@ -856,11 +839,11 @@ function PasswordGenerator() {
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">生成されたパスワード</label>
                     <div
-                        className="text-2xl font-mono font-bold text-amber-700 tracking-widest text-center py-2 bg-white rounded border border-amber-200 cursor-pointer select-all"
+                        className="text-2xl font-mono font-bold text-amber-700 tracking-widest text-center py-2 bg-white rounded border border-amber-200 cursor-pointer select-all whitespace-pre-line leading-relaxed"
                         onClick={copyToClipboard}
                         title="クリックでコピー"
                     >
-                        {password}
+                        {formatGeneratedPassword(password)}
                     </div>
                     <div className="flex items-center justify-between mt-2">
                         <span className="text-xs text-gray-400">{password.length}文字</span>
