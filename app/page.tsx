@@ -40,8 +40,8 @@ const TOOLTIPS: Record<string, string> = {
     自在性: "コース・展開・馬場への適応力。高いほど幅広い条件に対応できる。",
     加速力: "スタート後の加速力。高いほど序盤のダッシュが速い。",
     HP: "体力・全体的なスタミナ。レース全体の消耗に影響する。",
-    "お祭り好き": "GI・EXレースでのみ実力以上の能力を発揮する「大舞台で燃えるタイプ」。0〜15の16段階。EXでは「祭＋1」ごとに「長距離＋1・加速力＋1」相当の補正がかかる。",
-    気性: "4-2気性。ほ系・み系(○)とは系・ふ系(なし)に分かれる。ほ系・み系のほうが強く、EXでは「長距離＋18・加速力＋18」相当の差がある。",
+    お祭り好き: "GI・EXレースでのみ実力以上の能力を発揮する「大舞台で燃えるタイプ」。0～15の16段階。EXでは「祭＋1」ごとに「長距離＋1・加速力＋1」相当の補正がかかる。",
+    "4-2気性": "ほ系・み系(○)とは系・ふ系(なし)に分かれる。ほ系・み系のほうが強く、EXでは「長距離＋18・加速力＋18」相当の差がある。",
     スロット: "登録スロット。スロット1登録(○)のほうがタイムが速い。EXでは「長＋2・瞬＋2・持＋2・自＋2・加＋2」相当の差がある。",
     Ａ１: "先行・長距離・瞬発・持続・底力・自在・加速の7能力の平均値。",
     Ａ２: "先行・長距離・瞬発・持続・底力・自在・加速・HPの8能力の平均値。",
@@ -312,6 +312,10 @@ function PasswordAnalyzer() {
                             <InfoItem label="かかり癖" value={result.kakari}/>
                             <InfoItem label="あおり癖" value={result.aori}/>
                             <InfoItem label="いれこみ癖" value={result.irekomi}/>
+                            <InfoItem label="4-2気性" value={result.kisyo || "なし"}/>
+                            <InfoItem label="スロット" value={result.slot || "なし"}/>
+                            <InfoItem label="あがり症" value={result.agari}/>
+                            <InfoItem label="クロス病" value={result.cross}/>
                         </div>
                     </div>
 
@@ -322,7 +326,7 @@ function PasswordAnalyzer() {
                             <tr className="text-xs text-gray-500 border-b border-gray-200">
                                 <th className="pb-1 font-medium">能力</th>
                                 <th className="pb-1 font-medium text-right">値</th>
-                                <th className="pb-1 font-medium text-center">評価</th>
+                                <th className="pb-1 font-medium text-center">評価 ※</th>
                                 <th className="pb-1 font-medium">理論最大値 ※</th>
                             </tr>
                             </thead>
@@ -343,8 +347,6 @@ function PasswordAnalyzer() {
                                         maxValue={calcMaxAbility(abilities.kasoku, "kasoku")}/>
                             <AbilityRow label="hp" labelJp="HP" value={abilities.hp}/>
                             <AbilityRow label="omatsuri" labelJp="お祭り好き" value={result.festival} grade=""/>
-                            <AbilityRow label="kisyo" labelJp="気性" value={result.kisyo || "なし"} grade=""/>
-                            <AbilityRow label="slot" labelJp="スロット" value={result.slot || "なし"} grade=""/>
                             <AbilityRow label="a1" labelJp="Ａ１" value={result.a1} grade=""/>
                             <AbilityRow label="a2" labelJp="Ａ２" value={result.a2} grade=""/>
                             <AbilityRow label="a3" labelJp="Ａ３" value={result.a3} grade=""/>
@@ -354,10 +356,11 @@ function PasswordAnalyzer() {
                             <AbilityRow label="senShun" labelJp="先瞬" value={result.senShun} grade=""/>
                             <AbilityRow label="shunKa" labelJp="瞬加" value={result.shunKa} grade=""/>
                             <AbilityRow label="senKa" labelJp="先加" value={result.senKa} grade=""/>
-                            <AbilityRow label="agari" labelJp="あがり症" value={result.agari} grade=""/>
-                            <AbilityRow label="cross" labelJp="クロス病" value={result.cross} grade=""/>
                             </tbody>
                         </table>
+                        <p className="text-xs text-gray-400 mt-2">
+                            ※ 評価基準: A=121以上、B=86～120、C=51～85、D=50以下
+                        </p>
                         <p className="text-xs text-gray-400 mt-2">
                             ※ 理論最大値: 3歳1月1週（調教前）時点のパスワードで計算した場合の成長後最大値。
                             長距離 +65、その他 +75 が上限の目安。
@@ -433,7 +436,7 @@ function PasswordGenerator() {
                     <AbilityInput label="hp" labelJp="HP" value={abilities.hp} onChange={(v) => setAbility("hp", v)}/>
                 </div>
                 <div className="mt-3 text-xs text-gray-400">
-                    評価基準: A=121以上, B=86〜120, C=51〜85, D=50以下
+                    評価基準: A=121以上, B=86～120, C=51～85, D=50以下
                 </div>
             </section>
 
