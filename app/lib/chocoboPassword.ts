@@ -168,6 +168,13 @@ const LIVE_NAME_CODE_TO_CHAR: string[] = [
   "ュ", "ョ", "ー", "０", "１", "２", "３", "４", "５", "６", "７", "８", "９",
 ];
 
+const LIVE_NAME_CHAR_TO_CODE: Readonly<Record<string, number>> = Object.freeze(
+  LIVE_NAME_CODE_TO_CHAR.reduce<Record<string, number>>((acc, ch, idx) => {
+    if (ch) acc[ch] = idx;
+    return acc;
+  }, {})
+);
+
 const LIVE_NAME_CODE_INDEXES = [26, 1, 24, 3, 15, 5, 20, 7, 17, 29] as const;
 const LIVE_WING_COLORS: WingColor[] = ["白", "黒", "黄金", "赤", "青", "緑", "黄色", "紫", "桃", "灰"];
 const LIVE_FOREHEAD_COLORS: ForeheadColor[] = ["赤", "無", "虹"];
@@ -201,8 +208,8 @@ export const EYE_COLORS: EyeColor[] = [
   "黄", "赤", "青", "緑", "紫", "橙", "白", "黒",
 ];
 
-export const BODY_TYPES: BodyType[] = ["普通", "ずんぐり", "スレンダー", "重厚"];
-export const BODY_SIZES: BodySize[] = ["普通", "大", "小"];
+export const BODY_TYPES: BodyType[] = ["やせ", "普通", "デブ"];
+export const BODY_SIZES: BodySize[] = ["低", "中", "高"];
 
 // ─────────────────────────────────────────────────────────────
 // Bit-stream helpers
@@ -475,55 +482,123 @@ export function decodePassword(password: string): ChocoboParams | null {
  * Encode chocobo parameters into a 34-character password string.
  */
 export function encodePassword(params: ChocoboParams): string {
-  const bits: number[] = new Array(PASSWORD_LENGTH * 6).fill(0);
+  const code: number[] = new Array(PASSWORD_LENGTH).fill(0);
+  const { abilities } = params;
 
-  const { abilities, habits } = params;
+  const senko = clamp(abilities.senko, 0, 255);
+  const chokyo = clamp(abilities.chokyo, 0, 255);
+  const shunpatsu = clamp(abilities.shunpatsu, 0, 255);
+  const jizoku = clamp(abilities.jizoku, 0, 255);
+  const sokojikara = clamp(abilities.sokojikara, 0, 255);
+  const jizaisei = clamp(abilities.jizaisei, 0, 255);
+  const kasoku = clamp(abilities.kasoku, 0, 255);
+  const hp = clamp(abilities.hp, 0, 255);
 
-  writeBits(bits, OFF.senko,      8, clamp(abilities.senko,      0, 255));
-  writeBits(bits, OFF.chokyo,     8, clamp(abilities.chokyo,     0, 255));
-  writeBits(bits, OFF.shunpatsu,  8, clamp(abilities.shunpatsu,  0, 255));
-  writeBits(bits, OFF.jizoku,     8, clamp(abilities.jizoku,     0, 255));
-  writeBits(bits, OFF.sokojikara, 8, clamp(abilities.sokojikara, 0, 255));
-  writeBits(bits, OFF.jizaisei,   8, clamp(abilities.jizaisei,   0, 255));
-  writeBits(bits, OFF.kasoku,     8, clamp(abilities.kasoku,     0, 255));
-  writeBits(bits, OFF.hp,         8, clamp(abilities.hp,         0, 255));
+  const senkoHi = Math.floor(senko / 16);
+  const senkoLo = senko % 16;
+  const chokyoHi = Math.floor(chokyo / 32);
+  const chokyoLo = chokyo % 32;
+  const shunHi = Math.floor(shunpatsu / 64);
+  const shunLo = shunpatsu % 64;
+  const jizokuHi = Math.floor(jizoku / 128);
+  const jizokuLo = jizoku % 128;
+  const sokoHi = Math.floor(sokojikara / 16);
+  const sokoLo = sokojikara % 16;
+  const jizaiHi = Math.floor(jizaisei / 2);
+  const jizaiLo = jizaisei % 2;
+  const kasokuHi = Math.floor(kasoku / 4);
+  const kasokuLo = kasoku % 4;
+  const hpHi = Math.floor(hp / 8);
+  const hpLo = hp % 8;
 
-  writeBits(bits, OFF.gender,        1, params.gender === "雌" ? 1 : 0);
-  writeBits(bits, OFF.wingColor,     3, WING_COLORS.indexOf(params.wingColor));
-  writeBits(bits, OFF.foreheadColor, 3, FOREHEAD_COLORS.indexOf(params.foreheadColor));
-  writeBits(bits, OFF.eyeColor,      3, EYE_COLORS.indexOf(params.eyeColor));
-  writeBits(bits, OFF.bodyType,      2, BODY_TYPES.indexOf(params.bodyType));
-  writeBits(bits, OFF.bodySize,      2, BODY_SIZES.indexOf(params.bodySize));
+  const type =
+    (params.kakari === "あり" ? 4 : 0) +
+    (params.aori === "あり" ? 2 : 0) +
+    (params.irekomi === "あり" ? 1 : 0);
 
-  writeBits(bits, OFF.ageYear,   4, clamp(params.ageYear  - 3, 0, 15));
-  writeBits(bits, OFF.ageMonth,  4, clamp(params.ageMonth - 1, 0, 11));
-  writeBits(bits, OFF.ageWeek,   2, clamp(params.ageWeek  - 1, 0, 3));
-  writeBits(bits, OFF.regMonth,  4, clamp(params.regMonth - 1, 0, 11));
-  writeBits(bits, OFF.regWeek,   2, clamp(params.regWeek  - 1, 0, 3));
+  code[19] = clamp(type, 0, 7) * 16 + senkoHi;
+  code[6] = chokyoHi + senkoLo * 8;
+  code[21] = shunHi + chokyoLo * 4;
+  code[22] = jizokuHi + shunLo * 2;
+  code[23] = jizokuLo;
+  code[10] = sokoHi + hpLo * 16;
 
-  writeBits(bits, OFF.wins,  7, clamp(params.wins,  0, 127));
-  writeBits(bits, OFF.races, 7, clamp(params.races, 0, 127));
+  const slotCode = params.slot === "○" ? 1 : 0;
+  code[11] = slotCode + sokoLo * 8;
 
-  writeBits(bits, OFF.kakari,   1, habits.kakari       ? 1 : 0);
-  writeBits(bits, OFF.deokure,  1, habits.deokure      ? 1 : 0);
-  writeBits(bits, OFF.omatsuri, 1, habits.omatsuri     ? 1 : 0);
-  writeBits(bits, OFF.hidari,   1, habits.hidarimawari ? 1 : 0);
-  writeBits(bits, OFF.migi,     1, habits.migimawari   ? 1 : 0);
-  writeBits(bits, OFF.soto,     1, habits.sotowaku     ? 1 : 0);
-  writeBits(bits, OFF.uchi,     1, habits.uchiwaku     ? 1 : 0);
-  writeBits(bits, OFF.hare,     1, habits.hare         ? 1 : 0);
-  writeBits(bits, OFF.ame,      1, habits.ame          ? 1 : 0);
-  writeBits(bits, OFF.omoba,    1, habits.omoba        ? 1 : 0);
+  code[2] = jizaiHi;
+  code[25] = kasokuHi + jizaiLo * 64;
+  code[0] = hpHi + kasokuLo * 32;
 
-  // Encode name (up to 5 chars)
-  const nameTrimmed = params.name.slice(0, MAX_NAME_LENGTH).padEnd(MAX_NAME_LENGTH, "ぁ");
-  for (let i = 0; i < MAX_NAME_LENGTH; i++) {
-    const ch = nameTrimmed[i];
-    const idx = NAME_CHARS.indexOf(ch);
-    writeBits(bits, OFF.name + i * 6, 6, idx >= 0 ? idx : 0);
+  const festival = clamp(Math.floor(params.festival), 0, 15);
+  const matsLow = Math.floor(festival / 2);
+  const matsHi = festival % 2;
+
+  const genderCode = params.gender === "雌" ? 1 : 0;
+  const dartCode = LIVE_DARTS.indexOf(params.dart as (typeof LIVE_DARTS)[number]);
+  code[16] = matsLow + genderCode * 8 + clamp(dartCode >= 0 ? dartCode : 0, 0, 3) * 16;
+
+  const roundCode = LIVE_ROUNDS.indexOf(params.round as (typeof LIVE_ROUNDS)[number]);
+  const tempCode = LIVE_TEMPS.indexOf(params.temp as (typeof LIVE_TEMPS)[number]);
+  code[8] = matsHi * 64 + clamp(roundCode >= 0 ? roundCode : 0, 0, 3) * 4 + clamp(tempCode >= 0 ? tempCode : 0, 0, 3);
+
+  const wingColorCode = LIVE_WING_COLORS.indexOf(params.wingColor as WingColor);
+  const wingCode = clamp(wingColorCode >= 0 ? wingColorCode : 0, 0, 9);
+  const wingHigh = Math.floor(wingCode / 4);
+  const wingLow = wingCode % 4;
+
+  const ageYear = clamp(Math.floor(params.ageYear), 0, 15);
+  const ageMonth = clamp(Math.floor(params.ageMonth), 0, 15);
+  const ageWeekRaw = clamp(Math.floor(params.ageWeek) - 1, 0, 3);
+
+  const bodySizeCode = LIVE_BODY_SIZES.indexOf(params.bodySize as BodySize);
+  const bodySize = clamp(bodySizeCode >= 0 ? bodySizeCode : 0, 0, 2);
+  const bodySizeHigh = Math.floor(bodySize / 2);
+  const bodySizeLow = bodySize % 2;
+
+  code[14] = wingLow * 32 + ageYear * 2 + bodySizeHigh;
+  code[27] = ageMonth * 8 + ageWeekRaw * 2;
+
+  const races = clamp(Math.floor(params.races), 0, 63);
+  const wins = clamp(Math.floor(params.wins), 0, 31);
+  code[28] = races * 2;
+  code[12] = wins * 4;
+
+  code[13] = wingHigh;
+
+  const eyeColorCode = LIVE_EYE_COLORS.indexOf(params.eyeColor as EyeColor);
+  const foreheadColorCode = LIVE_FOREHEAD_COLORS.indexOf(params.foreheadColor as ForeheadColor);
+  const bodyTypeCode = LIVE_BODY_TYPES.indexOf(params.bodyType as BodyType);
+
+  code[4] =
+    clamp(eyeColorCode >= 0 ? eyeColorCode : 0, 0, 3) +
+    clamp(foreheadColorCode >= 0 ? foreheadColorCode : 0, 0, 2) * 4 +
+    clamp(bodyTypeCode >= 0 ? bodyTypeCode : 0, 0, 2) * 16 +
+    bodySizeLow * 64;
+
+  const crossCode = params.cross === "あり" ? 1 : 0;
+  const agariCode = params.agari === "あり" ? 1 : 0;
+  const kisyoCode = params.kisyo === "○" ? (agariCode === 1 ? 3 : 2) : agariCode;
+  code[18] = clamp(kisyoCode, 0, 3) * 2 + crossCode;
+
+  const nameChars = Array.from(params.name)
+    .slice(0, LIVE_NAME_CODE_INDEXES.length)
+    .map((ch) => {
+      const cp = ch.codePointAt(0) ?? 0;
+      if (cp >= CHAR_TABLE_START && cp <= CHAR_TABLE_END) {
+        return String.fromCodePoint(cp + KATAKANA_OFFSET);
+      }
+      return ch;
+    });
+  while (nameChars.length < LIVE_NAME_CODE_INDEXES.length) nameChars.push("");
+
+  for (let i = 0; i < LIVE_NAME_CODE_INDEXES.length; i++) {
+    const idx = LIVE_NAME_CODE_INDEXES[i];
+    const ch = nameChars[i] ?? "";
+    code[idx] = LIVE_NAME_CHAR_TO_CODE[ch] ?? 0;
   }
 
-  return bitsToPassword(bits);
+  return code.map((v) => LIVE_PASSWORD_CHARS[clamp(v, 0, 127)] ?? LIVE_PASSWORD_CHARS[0]).join("");
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -550,30 +625,6 @@ export function calcMaxAbility(current: number, stat: keyof ChocoboAbilities): n
   if (stat === "hp") return current; // HP doesn't grow
   const growth = stat === "chokyo" ? 65 : 75;
   return Math.min(255, current + growth);
-}
-
-/**
- * A1 – average of the 7 main ability values (excluding HP).
- */
-export function calcA1(abilities: ChocoboAbilities): number {
-  const { senko, chokyo, shunpatsu, jizoku, sokojikara, jizaisei, kasoku } = abilities;
-  return Math.round((senko + chokyo + shunpatsu + jizoku + sokojikara + jizaisei + kasoku) / 7);
-}
-
-/**
- * A2 – average of all 8 values including HP.
- */
-export function calcA2(abilities: ChocoboAbilities): number {
-  const { senko, chokyo, shunpatsu, jizoku, sokojikara, jizaisei, kasoku, hp } = abilities;
-  return Math.round((senko + chokyo + shunpatsu + jizoku + sokojikara + jizaisei + kasoku + hp) / 8);
-}
-
-/**
- * A3 – average of 先行, 瞬発, 加速 (sprint-oriented stats).
- */
-export function calcA3(abilities: ChocoboAbilities): number {
-  const { senko, shunpatsu, kasoku } = abilities;
-  return Math.round((senko + shunpatsu + kasoku) / 3);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -608,13 +659,13 @@ export function defaultParams(): ChocoboParams {
       kasoku: 100,
       hp: 100,
     },
-    name: "ちょこぼ",
+    name: "チョコボ",
     gender: "雄",
     wingColor: "黄色",
     foreheadColor: "黄色",
     eyeColor: "黄",
     bodyType: "普通",
-    bodySize: "普通",
+    bodySize: "中",
     ageYear: 3,
     ageMonth: 1,
     ageWeek: 1,

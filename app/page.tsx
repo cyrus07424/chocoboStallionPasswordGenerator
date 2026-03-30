@@ -6,9 +6,6 @@ import {
     BODY_TYPES,
     type BodySize,
     type BodyType,
-    calcA1,
-    calcA2,
-    calcA3,
     calcMaxAbility,
     type ChocoboAbilities,
     type ChocoboParams,
@@ -539,6 +536,22 @@ function PasswordGenerator() {
     const [password, setPassword] = useState("");
     const [copied, setCopied] = useState(false);
 
+    const normalizeKatakanaName = (value: string) => {
+        const normalized = value.normalize("NFKC");
+        const katakanaOnly = Array.from(normalized)
+            .map((ch) => {
+                const code = ch.codePointAt(0) ?? 0;
+                if (code >= 0x3041 && code <= 0x3096) {
+                    return String.fromCodePoint(code + 0x60);
+                }
+                return ch;
+            })
+            .filter((ch) => /[ァ-ヶー]/.test(ch))
+            .join("");
+
+        return katakanaOnly.slice(0, 10);
+    };
+
     const generate = () => {
         const pw = encodePassword(params);
         setPassword(pw);
@@ -560,57 +573,34 @@ function PasswordGenerator() {
         }));
     };
 
-    const setHabit = (key: keyof typeof params.habits, value: boolean) => {
-        setParams((p) => ({
-            ...p,
-            habits: {...p.habits, [key]: value},
-        }));
-    };
-
     const {abilities} = params;
+    const derivedStats = {
+        a1: Math.floor((abilities.senko + abilities.chokyo + abilities.shunpatsu + abilities.jizoku + abilities.sokojikara + abilities.jizaisei + abilities.kasoku) / 7),
+        a2: Math.floor((abilities.senko + abilities.chokyo + abilities.shunpatsu + abilities.jizoku + abilities.sokojikara + abilities.jizaisei + abilities.kasoku + abilities.hp) / 8),
+        a3: Math.floor((abilities.senko + abilities.shunpatsu + abilities.kasoku) / 3),
+        a4: Math.floor((abilities.senko + abilities.shunpatsu + abilities.jizaisei + abilities.kasoku) / 4),
+        a5: Math.floor((abilities.senko + abilities.chokyo + abilities.shunpatsu + abilities.jizaisei + abilities.kasoku) / 5),
+        senJizai: Math.floor((abilities.senko + abilities.jizaisei) / 2),
+        senShun: Math.floor((abilities.senko + abilities.shunpatsu) / 2),
+        shunKa: Math.floor((abilities.shunpatsu + abilities.kasoku) / 2),
+        senKa: Math.floor((abilities.senko + abilities.kasoku) / 2),
+    };
 
     return (
         <div className="space-y-6">
-            <section className="bg-white rounded-lg border border-gray-200 p-4">
-                <h3 className="font-semibold text-gray-800 mb-4">能力値 (0–255)</h3>
-                <div className="mb-2 flex gap-6 text-sm text-gray-600">
-                    <span>A1: <b>{calcA1(abilities)}</b></span>
-                    <span>A2: <b>{calcA2(abilities)}</b></span>
-                    <span>A3: <b>{calcA3(abilities)}</b></span>
-                </div>
-                <div className="space-y-2">
-                    <AbilityInput label="senko" labelJp="先行力" value={abilities.senko}
-                                  onChange={(v) => setAbility("senko", v)}/>
-                    <AbilityInput label="chokyo" labelJp="長距離" value={abilities.chokyo}
-                                  onChange={(v) => setAbility("chokyo", v)}/>
-                    <AbilityInput label="shunpatsu" labelJp="瞬発力" value={abilities.shunpatsu}
-                                  onChange={(v) => setAbility("shunpatsu", v)}/>
-                    <AbilityInput label="jizoku" labelJp="持続力" value={abilities.jizoku}
-                                  onChange={(v) => setAbility("jizoku", v)}/>
-                    <AbilityInput label="sokojikara" labelJp="底力" value={abilities.sokojikara}
-                                  onChange={(v) => setAbility("sokojikara", v)}/>
-                    <AbilityInput label="jizaisei" labelJp="自在性" value={abilities.jizaisei}
-                                  onChange={(v) => setAbility("jizaisei", v)}/>
-                    <AbilityInput label="kasoku" labelJp="加速力" value={abilities.kasoku}
-                                  onChange={(v) => setAbility("kasoku", v)}/>
-                    <AbilityInput label="hp" labelJp="HP" value={abilities.hp} onChange={(v) => setAbility("hp", v)}/>
-                </div>
-                <div className="mt-3 text-xs text-gray-400">
-                    評価基準: A=121以上, B=86～120, C=51～85, D=50以下
-                </div>
-            </section>
 
             <section className="bg-white rounded-lg border border-gray-200 p-4">
                 <h3 className="font-semibold text-gray-800 mb-4">基本情報</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">羽名（最大5文字）</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">羽名（最大10文字）</label>
                         <input
                             type="text"
                             value={params.name}
-                            maxLength={5}
-                            onChange={(e) => setParams((p) => ({...p, name: e.target.value}))}
-                            placeholder="ひらがな5文字以内"
+                            maxLength={10}
+                            inputMode="text"
+                            onChange={(e) => setParams((p) => ({...p, name: normalizeKatakanaName(e.target.value)}))}
+                            placeholder="カタカナ10文字以内"
                             className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
                         />
                     </div>
@@ -674,7 +664,7 @@ function PasswordGenerator() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">年齢</label>
-                        <div className="flex gap-2 items-center">
+                        <div className="grid grid-cols-3 gap-2">
                             <NumberField label="年" value={params.ageYear} min={3} max={18}
                                          onChange={(v) => setParams((p) => ({...p, ageYear: v}))}/>
                             <NumberField label="月" value={params.ageMonth} min={1} max={12}
@@ -685,7 +675,7 @@ function PasswordGenerator() {
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">登録</label>
-                        <div className="flex gap-2 items-center">
+                        <div className="grid grid-cols-2 gap-2">
                             <NumberField label="月" value={params.regMonth} min={1} max={12}
                                          onChange={(v) => setParams((p) => ({...p, regMonth: v}))}/>
                             <NumberField label="週" value={params.regWeek} min={1} max={4}
@@ -694,7 +684,7 @@ function PasswordGenerator() {
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">戦績</label>
-                        <div className="flex gap-2 items-center">
+                        <div className="grid grid-cols-2 gap-2">
                             <NumberField label="勝" value={params.wins} min={0} max={127}
                                          onChange={(v) => setParams((p) => ({...p, wins: v}))}/>
                             <NumberField label="戦" value={params.races} min={0} max={127}
@@ -705,26 +695,150 @@ function PasswordGenerator() {
             </section>
 
             <section className="bg-white rounded-lg border border-gray-200 p-4">
-                <h3 className="font-semibold text-gray-800 mb-3">癖・得意条件</h3>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                    <HabitCheckbox label="かかり癖" checked={params.habits.kakari}
-                                   onChange={(v) => setHabit("kakari", v)}/>
-                    <HabitCheckbox label="出遅れ癖" checked={params.habits.deokure}
-                                   onChange={(v) => setHabit("deokure", v)}/>
-                    <HabitCheckbox label="お祭り好き" checked={params.habits.omatsuri}
-                                   onChange={(v) => setHabit("omatsuri", v)}/>
-                    <HabitCheckbox label="左回り得意" checked={params.habits.hidarimawari}
-                                   onChange={(v) => setHabit("hidarimawari", v)}/>
-                    <HabitCheckbox label="右回り得意" checked={params.habits.migimawari}
-                                   onChange={(v) => setHabit("migimawari", v)}/>
-                    <HabitCheckbox label="外枠得意" checked={params.habits.sotowaku}
-                                   onChange={(v) => setHabit("sotowaku", v)}/>
-                    <HabitCheckbox label="内枠得意" checked={params.habits.uchiwaku}
-                                   onChange={(v) => setHabit("uchiwaku", v)}/>
-                    <HabitCheckbox label="晴れ得意" checked={params.habits.hare} onChange={(v) => setHabit("hare", v)}/>
-                    <HabitCheckbox label="雨得意" checked={params.habits.ame} onChange={(v) => setHabit("ame", v)}/>
-                    <HabitCheckbox label="重馬場得意" checked={params.habits.omoba}
-                                   onChange={(v) => setHabit("omoba", v)}/>
+                <h3 className="font-semibold text-gray-800 mb-4">能力値 (0–255)</h3>
+                <div className="space-y-2">
+                    <AbilityInput label="senko" labelJp="先行力" value={abilities.senko}
+                                  onChange={(v) => setAbility("senko", v)}/>
+                    <AbilityInput label="chokyo" labelJp="長距離" value={abilities.chokyo}
+                                  onChange={(v) => setAbility("chokyo", v)}/>
+                    <AbilityInput label="shunpatsu" labelJp="瞬発力" value={abilities.shunpatsu}
+                                  onChange={(v) => setAbility("shunpatsu", v)}/>
+                    <AbilityInput label="jizoku" labelJp="持続力" value={abilities.jizoku}
+                                  onChange={(v) => setAbility("jizoku", v)}/>
+                    <AbilityInput label="sokojikara" labelJp="底力" value={abilities.sokojikara}
+                                  onChange={(v) => setAbility("sokojikara", v)}/>
+                    <AbilityInput label="jizaisei" labelJp="自在性" value={abilities.jizaisei}
+                                  onChange={(v) => setAbility("jizaisei", v)}/>
+                    <AbilityInput label="kasoku" labelJp="加速力" value={abilities.kasoku}
+                                  onChange={(v) => setAbility("kasoku", v)}/>
+                    <AbilityInput label="hp" labelJp="HP" value={abilities.hp} onChange={(v) => setAbility("hp", v)}/>
+                </div>
+                <div className="mt-3 text-xs text-gray-400">
+                    評価基準: A=121以上, B=86～120, C=51～85, D=50以下
+                </div>
+            </section>
+
+            <section className="bg-white rounded-lg border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-800 mb-3">派生項目プレビュー</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <InfoItem label="Ａ１" value={String(derivedStats.a1)}/>
+                    <InfoItem label="Ａ２" value={String(derivedStats.a2)}/>
+                    <InfoItem label="Ａ３" value={String(derivedStats.a3)}/>
+                    <InfoItem label="Ａ４" value={String(derivedStats.a4)}/>
+                    <InfoItem label="Ａ５" value={String(derivedStats.a5)}/>
+                    <InfoItem label="先自" value={String(derivedStats.senJizai)}/>
+                    <InfoItem label="先瞬" value={String(derivedStats.senShun)}/>
+                    <InfoItem label="瞬加" value={String(derivedStats.shunKa)}/>
+                    <InfoItem label="先加" value={String(derivedStats.senKa)}/>
+                </div>
+            </section>
+
+            <section className="bg-white rounded-lg border border-gray-200 p-4">
+                <h3 className="font-semibold text-gray-800 mb-3">追加設定</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <MappedSelectField
+                        label="ダート"
+                        value={params.dart}
+                        options={[
+                            {label: "なし", value: ""},
+                            {label: "△", value: "△"},
+                            {label: "○", value: "○"},
+                            {label: "◎", value: "◎"},
+                        ]}
+                        onChange={(v) => setParams((p) => ({...p, dart: v as ChocoboParams["dart"]}))}
+                    />
+                    <MappedSelectField
+                        label="周り"
+                        value={params.round}
+                        options={[
+                            {label: "なし", value: "なし"},
+                            {label: "右", value: "右"},
+                            {label: "左", value: "左"},
+                            {label: "右左", value: "右左"},
+                        ]}
+                        onChange={(v) => setParams((p) => ({...p, round: v as ChocoboParams["round"]}))}
+                    />
+                    <MappedSelectField
+                        label="気温"
+                        value={params.temp}
+                        options={[
+                            {label: "なし", value: "なし"},
+                            {label: "暑", value: "暑"},
+                            {label: "寒", value: "寒"},
+                            {label: "暑寒", value: "暑寒"},
+                        ]}
+                        onChange={(v) => setParams((p) => ({...p, temp: v as ChocoboParams["temp"]}))}
+                    />
+                    <NumberField
+                        label="お祭り好き"
+                        value={params.festival}
+                        min={0}
+                        max={15}
+                        onChange={(v) => setParams((p) => ({...p, festival: v}))}
+                    />
+                    <MappedSelectField
+                        label="かかり癖"
+                        value={params.kakari}
+                        options={[
+                            {label: "なし", value: "なし"},
+                            {label: "あり", value: "あり"},
+                        ]}
+                        onChange={(v) => setParams((p) => ({...p, kakari: v as ChocoboParams["kakari"]}))}
+                    />
+                    <MappedSelectField
+                        label="あおり癖"
+                        value={params.aori}
+                        options={[
+                            {label: "なし", value: "なし"},
+                            {label: "あり", value: "あり"},
+                        ]}
+                        onChange={(v) => setParams((p) => ({...p, aori: v as ChocoboParams["aori"]}))}
+                    />
+                    <MappedSelectField
+                        label="いれこみ癖"
+                        value={params.irekomi}
+                        options={[
+                            {label: "なし", value: "なし"},
+                            {label: "あり", value: "あり"},
+                        ]}
+                        onChange={(v) => setParams((p) => ({...p, irekomi: v as ChocoboParams["irekomi"]}))}
+                    />
+                    <MappedSelectField
+                        label="4-2気性"
+                        value={params.kisyo}
+                        options={[
+                            {label: "なし", value: ""},
+                            {label: "○", value: "○"},
+                        ]}
+                        onChange={(v) => setParams((p) => ({...p, kisyo: v as ChocoboParams["kisyo"]}))}
+                    />
+                    <MappedSelectField
+                        label="スロット"
+                        value={params.slot}
+                        options={[
+                            {label: "なし", value: ""},
+                            {label: "○", value: "○"},
+                        ]}
+                        onChange={(v) => setParams((p) => ({...p, slot: v as ChocoboParams["slot"]}))}
+                    />
+                    <MappedSelectField
+                        label="あがり症"
+                        value={params.agari}
+                        options={[
+                            {label: "なし", value: "なし"},
+                            {label: "あり", value: "あり"},
+                        ]}
+                        onChange={(v) => setParams((p) => ({...p, agari: v as ChocoboParams["agari"]}))}
+                    />
+                    <MappedSelectField
+                        label="クロス病"
+                        value={params.cross}
+                        options={[
+                            {label: "なし", value: "なし"},
+                            {label: "あり", value: "あり"},
+                        ]}
+                        onChange={(v) => setParams((p) => ({...p, cross: v as ChocoboParams["cross"]}))}
+                    />
                 </div>
             </section>
 
@@ -778,25 +892,32 @@ function InfoItem({label, value}: { label: string; value: string }) {
 }
 
 
-function HabitCheckbox({
-                           label,
-                           checked,
-                           onChange,
-                       }: {
+function MappedSelectField({
+                               label,
+                               value,
+                               options,
+                               onChange,
+                           }: {
     label: string;
-    checked: boolean;
-    onChange: (v: boolean) => void;
+    value: string;
+    options: Array<{ label: string; value: string }>;
+    onChange: (v: string) => void;
 }) {
     return (
-        <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-            <input
-                type="checkbox"
-                checked={checked}
-                onChange={(e) => onChange(e.target.checked)}
-                className="accent-yellow-500"
-            />
-            {label}
-        </label>
+        <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+            <select
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            >
+                {options.map((o) => (
+                    <option key={`${label}-${o.label}-${o.value}`} value={o.value}>
+                        {o.label}
+                    </option>
+                ))}
+            </select>
+        </div>
     );
 }
 
@@ -843,7 +964,8 @@ function NumberField({
     onChange: (v: number) => void;
 }) {
     return (
-        <div className="flex items-center gap-1">
+        <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
             <input
                 type="number"
                 value={value}
@@ -852,9 +974,8 @@ function NumberField({
                 onChange={(e) =>
                     onChange(Math.max(min, Math.min(max, Number(e.target.value) || min)))
                 }
-                className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center"
+                className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
             />
-            <span className="text-sm text-gray-600">{label}</span>
         </div>
     );
 }
